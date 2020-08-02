@@ -6,7 +6,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
-import com.sun.istack.internal.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
@@ -257,8 +257,7 @@ public class ElementSorter<T> {
             }
         }
 
-        private @Nullable
-        T findByClassOrHandle(Class<?> clazz) {
+        private @Nullable T findByClassOrHandle(Class<?> clazz) {
             T element = context.orderedElements.inverse()
                     .get(OrderedElement.equalityToken(TypeToken.of(clazz)));
 

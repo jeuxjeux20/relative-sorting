@@ -1,5 +1,7 @@
 package com.github.jeuxjeux20.relativesorting;
 
+import com.github.jeuxjeux20.relativesorting.config.DefaultPositionProvider;
+
 import java.lang.annotation.*;
 
 /**

@@ -1,6 +1,7 @@
 package com.github.jeuxjeux20.relativesorting.config;
 
 import com.github.jeuxjeux20.relativesorting.Order;
+import com.github.jeuxjeux20.relativesorting.OrderedElement;
 
 import java.util.Objects;
 
