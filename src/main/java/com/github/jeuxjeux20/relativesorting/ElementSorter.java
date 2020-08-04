@@ -71,7 +71,7 @@ public class ElementSorter<T> {
         }
 
         Comparator<T> listPositionComparator = new ElementListPositionComparator(context);
-        TopologicalOrderIterator<T, ElementEdge> topologicalIterator =
+        TopologicalOrderIterator<T, DefaultEdge> topologicalIterator =
                 new TopologicalOrderIterator<>(context.graph, (a, b) -> {
                     int aPosition = findPosition(context, a);
                     int bPosition = findPosition(context, b);
@@ -104,38 +104,9 @@ public class ElementSorter<T> {
 
     }
 
-    private final class ElementGraph extends DirectedAcyclicGraph<T, ElementEdge> {
-        ElementGraph(SortContext context) {
-            super(null, () -> new ElementEdge(context), false);
-        }
-    }
-
-    private final class ElementEdge extends DefaultEdge {
-        private final SortContext context;
-
-        private boolean isExplicit = true;
-
-        public ElementEdge(SortContext context) {
-            this.context = context;
-        }
-
-        public boolean isExplicit() {
-            return isExplicit;
-        }
-
-        public void setExplicit(boolean explicit) {
-            isExplicit = explicit;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public String toString() {
-            return getIdentifier((T) getSource()) + " " +
-                   getIdentifier((T) getTarget()) + (isExplicit ? " [explicit]" : " [implicit]");
-        }
-
-        private String getIdentifier(T element) {
-            return context.orderedElements.get(element).getIdentifier().getRawType().getSimpleName();
+    private final class ElementGraph extends DirectedAcyclicGraph<T, DefaultEdge> {
+        ElementGraph() {
+            super(DefaultEdge.class);
         }
     }
 
@@ -187,7 +158,7 @@ public class ElementSorter<T> {
         }
 
         public ElementGraph createGraph() {
-            ElementGraph graph = new ElementGraph(context);
+            ElementGraph graph = new ElementGraph();
 
             addVertexes(graph);
             createImplicitEdges(graph);
@@ -209,8 +180,7 @@ public class ElementSorter<T> {
             for (T element : elements) {
                 if (isImplicitCandidate(element)) {
                     if (lastImplicitElement != null) {
-                        ElementEdge edge = graph.addEdge(lastImplicitElement, element);
-                        edge.setExplicit(false);
+                        graph.addEdge(lastImplicitElement, element);
                     }
 
                     lastImplicitElement = element;

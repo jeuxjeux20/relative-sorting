@@ -1,9 +1,12 @@
 package com.github.jeuxjeux20.relativesorting.config;
 
+import com.github.jeuxjeux20.relativesorting.ElementSorter;
 import com.github.jeuxjeux20.relativesorting.Order;
 import com.github.jeuxjeux20.relativesorting.OrderedElement;
 import com.github.jeuxjeux20.relativesorting.Placeholders;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
 
 import static com.github.jeuxjeux20.relativesorting.TestOrderedBindings.createOrderedBinding;
 import static org.junit.jupiter.api.Assertions.assertEquals;

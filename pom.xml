@@ -6,7 +6,7 @@
 
   <groupId>com.github.jeuxjeux20</groupId>
   <artifactId>relative-sorting</artifactId>
-  <version>0.1</version>
+  <version>0.1.1</version>
 
   <name>RelativeSorting</name>
   <description>Sort elements using relative constraints.</description>
@@ -79,6 +79,7 @@
           <target>${java.version}</target>
           <testSource>${java.version}</testSource>
           <testTarget>${java.version}</testTarget>
+          <compilerVersion>1.8</compilerVersion>
         </configuration>
       </plugin>
       <plugin>
