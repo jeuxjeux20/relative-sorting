@@ -1,20 +1,14 @@
 package com.github.jeuxjeux20.relativesorting;
 
 import com.github.jeuxjeux20.relativesorting.config.SortingConfiguration;
-import com.github.jeuxjeux20.relativesorting.config.UnresolvableClassHandling;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.reflect.TypeToken;
+import com.github.jeuxjeux20.relativesorting.config.UnresolvableIdentifierHandling;
+import com.google.common.collect.*;
 import org.jetbrains.annotations.Nullable;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ElementSorter<T> {
     private final OrderedElementFactory<T> orderedElementFactory;
@@ -41,27 +35,42 @@ public class ElementSorter<T> {
     }
 
     private SortContext createSortContext(List<T> elements, SortingConfiguration configuration) {
-        ImmutableBiMap<T, OrderedElement<T>> orderedElements = createOrderedElements(elements);
+        ImmutableBiMap<T, OrderedElement<? extends T>> orderedElements = createOrderedElements(elements, configuration);
 
         return new SortContext(elements, orderedElements, configuration);
     }
 
-    private ImmutableBiMap<T, OrderedElement<T>> createOrderedElements(Iterable<T> elements) {
-        ImmutableBiMap.Builder<T, OrderedElement<T>> builder = ImmutableBiMap.builder();
+    private ImmutableBiMap<T, OrderedElement<? extends T>> createOrderedElements(
+            Iterable<T> elements, SortingConfiguration configuration) {
+        Multimap<T, OrderedElement<? extends T>> multimap = ArrayListMultimap.create();
 
+        // Gather all elements into a Multimap.
         for (T element : elements) {
-            OrderedElement<T> orderedElement = orderedElementFactory.create(element);
+            OrderedElement<? extends T> orderedElement = orderedElementFactory.create(element);
 
             if (orderedElement != null) {
-                builder.put(element, orderedElement);
+                multimap.put(element, orderedElement);
             }
         }
 
-        try {
-            return builder.build();
-        } catch (IllegalArgumentException e) {
-            throw new DuplicateIdentifiersException("Multiple elements have the same identifier.", e);
+        // Remove all duplicate identifiers
+        for (T key : multimap.keySet()) {
+            Collection<OrderedElement<? extends T>> values = multimap.get(key);
+            if (values.size() > 1) {
+                OrderedElement<? extends T> picked = configuration.getDuplicateIdentifierSelector().select(values);
+
+                values.clear();
+                values.add(picked);
+            }
         }
+
+        // Flatten all of this into a BiMap.
+        ImmutableBiMap.Builder<T, OrderedElement<? extends T>> builder = ImmutableBiMap.builder();
+        for (Map.Entry<T, OrderedElement<? extends T>> entry : multimap.entries()) {
+            builder.put(entry.getKey(), entry.getValue());
+        }
+
+        return builder.build();
     }
 
     private List<T> sortElements(SortContext context) {
@@ -88,13 +97,13 @@ public class ElementSorter<T> {
     }
 
     private int findPosition(SortContext context, T element) {
-        OrderedElement<T> orderedElement = context.orderedElements.get(element);
-        Order order = orderedElement.getOrder();
+        OrderedElement<? extends T> orderedElement = context.orderedElements.get(element);
+        OrderConstraints order = orderedElement.getOrderConstraints();
 
         int position = 0;
 
         if (order != null) {
-            position = order.position();
+            position = order.getPosition();
         }
 
         if (position == 0) {
@@ -125,12 +134,12 @@ public class ElementSorter<T> {
 
     private final class SortContext {
         final List<T> elements;
-        final BiMap<T, OrderedElement<T>> orderedElements;
+        final BiMap<T, OrderedElement<? extends T>> orderedElements;
         final Map<T, Integer> elementPositions;
         final SortingConfiguration configuration;
         ElementGraph graph;
 
-        private SortContext(List<T> elements, BiMap<T, OrderedElement<T>> orderedElements,
+        private SortContext(List<T> elements, BiMap<T, OrderedElement<? extends T>> orderedElements,
                             SortingConfiguration configuration) {
             this.elements = elements;
             this.orderedElements = orderedElements;
@@ -189,29 +198,29 @@ public class ElementSorter<T> {
         }
 
         private boolean isImplicitCandidate(T element) {
-            OrderedElement<T> orderedElement = context.orderedElements.get(element);
-            Order order = orderedElement.getOrder();
+            OrderedElement<? extends T> orderedElement = context.orderedElements.get(element);
+            OrderConstraints order = orderedElement.getOrderConstraints();
 
             return order == null ||
-                   (order.before().length == 0 && order.after().length == 0 && order.position() == 0);
+                   (order.getBefore().isEmpty() && order.getAfter().isEmpty() && order.getPosition() == 0);
         }
 
         private void createExplicitEdges(ElementGraph graph) {
             for (T element : context.elements) {
-                Order order = context.orderedElements.get(element).getOrder();
+                OrderConstraints order = context.orderedElements.get(element).getOrderConstraints();
                 if (order == null) {
                     continue;
                 }
 
-                for (Class<?> beforeClass : order.before()) {
-                    T succeedingElement = findByClassOrHandle(beforeClass);
+                for (Object before : order.getBefore()) {
+                    T succeedingElement = findOrHandle(before);
                     if (succeedingElement != null) {
                         addExplicitEdge(graph, element, succeedingElement);
                     }
                 }
 
-                for (Class<?> afterClass : order.after()) {
-                    T precedingElement = findByClassOrHandle(afterClass);
+                for (Object after : order.getAfter()) {
+                    T precedingElement = findOrHandle(after);
                     if (precedingElement != null) {
                         addExplicitEdge(graph, precedingElement, element);
                     }
@@ -227,18 +236,18 @@ public class ElementSorter<T> {
             }
         }
 
-        private @Nullable T findByClassOrHandle(Class<?> clazz) {
+        private @Nullable T findOrHandle(Object identifier) {
             T element = context.orderedElements.inverse()
-                    .get(OrderedElement.equalityToken(TypeToken.of(clazz)));
+                    .get(OrderedElement.equalityToken(identifier));
 
             if (element != null) {
                 return element;
             } else {
-                UnresolvableClassHandling handling = context.configuration.getUnresolvableClassHandling();
+                UnresolvableIdentifierHandling handling = context.configuration.getUnresolvableIdentifierHandling();
 
                 switch (handling) {
                     case THROW:
-                        throw new UnableToResolveClassException(clazz);
+                        throw new UnableToResolveElementException(identifier);
                     case IGNORE:
                         return null;
                     default:
@@ -248,8 +257,8 @@ public class ElementSorter<T> {
         }
 
         private CycleDetectedException cycleDetectedException(T element, T otherElement) {
-            OrderedElement<T> orderedElement = context.orderedElements.get(element);
-            OrderedElement<T> otherOrderedElement = context.orderedElements.get(otherElement);
+            OrderedElement<? extends T> orderedElement = context.orderedElements.get(element);
+            OrderedElement<? extends T> otherOrderedElement = context.orderedElements.get(otherElement);
 
             return new CycleDetectedException(
                     "Cycle detected between " + orderedElement.getIdentifier() +

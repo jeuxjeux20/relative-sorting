@@ -14,5 +14,5 @@ public interface OrderedElementFactory<T> {
      * @param element the element
      * @return the ordered element, or {@code null} if it has failed
      */
-    @Nullable OrderedElement<T> create(T element);
+    @Nullable OrderedElement<? extends T> create(T element);
 }

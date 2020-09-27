@@ -1,6 +1,5 @@
 package com.github.jeuxjeux20.relativesorting.config;
 
-import com.github.jeuxjeux20.relativesorting.Order;
 import com.github.jeuxjeux20.relativesorting.OrderedElement;
 
 import java.util.Objects;
@@ -12,8 +11,11 @@ public final class SortingConfiguration {
     public static final DefaultPositionProvider DEFAULT_DEFAULT_POSITION
             = DefaultPositionProvider.CLOSEST;
 
-    public static final UnresolvableClassHandling DEFAULT_UNRESOLVABLE_CLASS_HANDLING =
-            UnresolvableClassHandling.THROW;
+    public static final UnresolvableIdentifierHandling DEFAULT_UNRESOLVABLE_IDENTIFIER_HANDLING =
+            UnresolvableIdentifierHandling.THROW;
+
+    public static final DuplicateIdentifierSelector DEFAULT_DUPLICATE_IDENTIFIER_SELECTOR =
+            DuplicateIdentifierSelector.ARBITRARY;
 
     /**
      * The default configuration. Default values are specified on every getter.
@@ -21,16 +23,21 @@ public final class SortingConfiguration {
     public static final SortingConfiguration DEFAULT = new SortingConfiguration();
 
     private final DefaultPositionProvider defaultPosition;
-    private final UnresolvableClassHandling unresolvableClassHandling;
+    private final UnresolvableIdentifierHandling unresolvableIdentifierHandling;
+    private final DuplicateIdentifierSelector duplicateIdentifierSelector;
 
     private SortingConfiguration() {
-        this(DEFAULT_DEFAULT_POSITION, DEFAULT_UNRESOLVABLE_CLASS_HANDLING);
+        this(DEFAULT_DEFAULT_POSITION,
+                DEFAULT_UNRESOLVABLE_IDENTIFIER_HANDLING,
+                DEFAULT_DUPLICATE_IDENTIFIER_SELECTOR);
     }
 
     private SortingConfiguration(DefaultPositionProvider defaultPosition,
-                                 UnresolvableClassHandling unresolvableClassHandling) {
+                                 UnresolvableIdentifierHandling unresolvableIdentifierHandling,
+                                 DuplicateIdentifierSelector duplicateIdentifierSelector) {
         this.defaultPosition = defaultPosition;
-        this.unresolvableClassHandling = unresolvableClassHandling;
+        this.unresolvableIdentifierHandling = unresolvableIdentifierHandling;
+        this.duplicateIdentifierSelector = duplicateIdentifierSelector;
     }
 
     /**
@@ -64,19 +71,24 @@ public final class SortingConfiguration {
     }
 
     /**
-     * Gets the behavior when a class in @{@link Order} can't be resolved as a element.
+     * Gets the behavior when an identifier can't be resolved as a element.
      * <p>
-     * The default value is {@link UnresolvableClassHandling#THROW}.
+     * The default value is {@link UnresolvableIdentifierHandling#THROW}.
      *
-     * @return the handling for an unresolvable class
+     * @return the handling for an unresolvable identifier
      */
-    public UnresolvableClassHandling getUnresolvableClassHandling() {
-        return unresolvableClassHandling;
+    public UnresolvableIdentifierHandling getUnresolvableIdentifierHandling() {
+        return unresolvableIdentifierHandling;
+    }
+
+    public DuplicateIdentifierSelector getDuplicateIdentifierSelector() {
+        return duplicateIdentifierSelector;
     }
 
     public static class Builder {
         private DefaultPositionProvider defaultPositionProvider;
-        private UnresolvableClassHandling unresolvableClassHandling;
+        private UnresolvableIdentifierHandling unresolvableIdentifierHandling;
+        private DuplicateIdentifierSelector duplicateIdentifierSelector;
 
         public Builder() {
             this(DEFAULT);
@@ -84,12 +96,12 @@ public final class SortingConfiguration {
 
         public Builder(SortingConfiguration configuration) {
             this.defaultPositionProvider = configuration.defaultPosition;
-            this.unresolvableClassHandling = configuration.unresolvableClassHandling;
+            this.unresolvableIdentifierHandling = configuration.unresolvableIdentifierHandling;
+            this.duplicateIdentifierSelector = configuration.duplicateIdentifierSelector;
         }
 
         /**
-         * Sets the default position, used when an element has no @{@link Order}
-         * annotation or when its {@link Order#position()} value is 0.
+         * Sets the default position strategy.
          *
          * @param defaultPositionProvider the default position
          * @return the same builder
@@ -101,14 +113,19 @@ public final class SortingConfiguration {
         }
 
         /**
-         * Sets how unresolvable classes should be handled.
+         * Sets how unresolvable identifiers should be handled.
          *
-         * @param unresolvableClassHandling the handling for unresolvable classes
+         * @param unresolvableIdentifierHandling the handling for unresolvable identifiers
          * @return the same builder
          * @throws NullPointerException when the given value is null
          */
-        public Builder unresolvableClassHandling(UnresolvableClassHandling unresolvableClassHandling) {
-            this.unresolvableClassHandling = Objects.requireNonNull(unresolvableClassHandling);
+        public Builder unresolvableIdentifierHandling(UnresolvableIdentifierHandling unresolvableIdentifierHandling) {
+            this.unresolvableIdentifierHandling = Objects.requireNonNull(unresolvableIdentifierHandling);
+            return this;
+        }
+
+        public Builder duplicateIdentifierSelector(DuplicateIdentifierSelector duplicateIdentifierSelector) {
+            this.duplicateIdentifierSelector = duplicateIdentifierSelector;
             return this;
         }
 
@@ -118,7 +135,9 @@ public final class SortingConfiguration {
          * @return a {@link SortingConfiguration} with the values of this builder
          */
         public SortingConfiguration build() {
-            return new SortingConfiguration(defaultPositionProvider, unresolvableClassHandling);
+            return new SortingConfiguration(defaultPositionProvider,
+                    unresolvableIdentifierHandling,
+                    duplicateIdentifierSelector);
         }
     }
 }

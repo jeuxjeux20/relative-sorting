@@ -6,7 +6,7 @@
 
   <groupId>com.github.jeuxjeux20</groupId>
   <artifactId>relative-sorting</artifactId>
-  <version>0.1.1</version>
+  <version>0.2-SNAPSHOT</version>
 
   <name>RelativeSorting</name>
   <description>Sort elements using relative constraints.</description>
